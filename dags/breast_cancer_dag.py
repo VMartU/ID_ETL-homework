@@ -9,6 +9,20 @@ import pandas as pd
 import joblib
 import os
 
+# Функция для сохранения результатов локально
+def save_to_local(execution_date=None, **kwargs):
+    date_str = execution_date.strftime('%Y-%m-%d') if execution_date else datetime.today().strftime('%Y-%m-%d')
+    source_dir = '/tmp/breast_cancer'
+    target_dir = f'/home/user/airflow_project/results/{date_str}'  # путь под WSL
+    os.makedirs(target_dir, exist_ok=True)
+    for fname in ['model.pkl', 'metrics.txt']:
+        src = os.path.join(source_dir, fname)
+        dst = os.path.join(target_dir, fname)
+        if os.path.exists(src):
+            with open(src, 'rb') as fsrc, open(dst, 'wb') as fdst:
+                fdst.write(fsrc.read())
+
+# Функция извлечения и сохранения датасета
 def extract():
     data = load_breast_cancer()
     df = pd.DataFrame(data.data, columns=data.feature_names)
@@ -16,6 +30,7 @@ def extract():
     os.makedirs('/tmp/breast_cancer', exist_ok=True)
     df.to_csv('/tmp/breast_cancer/dataset.csv', index=False)
 
+# Обучение модели и сохранение результатов
 def train_model():
     df = pd.read_csv('/tmp/breast_cancer/dataset.csv')
     X = df.drop('target', axis=1)
@@ -31,6 +46,7 @@ def train_model():
     with open('/tmp/breast_cancer/metrics.txt', 'w') as f:
         f.write(f'Accuracy: {acc:.4f}')
 
+# Параметры DAG
 default_args = {
     'owner': 'airflow',
     'start_date': datetime(2025, 6, 1),
@@ -55,4 +71,10 @@ with DAG(
         python_callable=train_model,
     )
 
-    t1 >> t2
+    t3 = PythonOperator(
+        task_id='save_results',
+        python_callable=save_to_local,
+        provide_context=True,
+    )
+
+    t1 >> t2 >> t3
