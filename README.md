@@ -141,7 +141,9 @@ airflow tasks test breast_cancer_dag train_model 2025-06-17
 ```
 dags/breast_cancer_dag.py
 ```
+### 🖼️ Визуализация DAG
 
+![DAG Graph](dag_graph.png)
 ---
 
 ### 📦 Результаты выполнения (артефакты)
