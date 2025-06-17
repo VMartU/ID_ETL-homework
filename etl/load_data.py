@@ -2,18 +2,26 @@ import pandas as pd
 import os
 import argparse
 import logging
+import time
 
 # Настройка логгирования
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def load_data(input_path, output_path):
-    # Имена колонок
     columns = ["id", "diagnosis"] + [f"feature_{i}" for i in range(1, 31)]
-    
-    # Загрузка данных
-    logging.info(f"Загружаем данные из: {input_path}")
-    df = pd.read_csv(input_path, header=None, names=columns)
-    
+
+    # Проверка и повторные попытки загрузки файла
+    for attempt in range(3):
+        if os.path.exists(input_path):
+            logging.info(f"Загружаем данные из: {input_path}")
+            df = pd.read_csv(input_path, header=None, names=columns)
+            break
+        logging.warning(f"Файл {input_path} не найден, попытка {attempt + 1}/3")
+        time.sleep(5)
+    else:
+        logging.error(f"Файл {input_path} не найден после 3 попыток.")
+        raise FileNotFoundError(f"Файл {input_path} не найден.")
+
     # Удаляем ID
     df = df.drop(columns=["id"])
 

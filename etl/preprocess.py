@@ -10,36 +10,49 @@ import joblib
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def preprocess_data(input_path, output_dir):
-    logging.info(f"Загружаем данные из {input_path}")
-    df = pd.read_csv(input_path)
+    try:
+        logging.info(f"Загружаем данные из {input_path}")
+        df = pd.read_csv(input_path)
 
-    # Преобразуем целевую переменную
-    df["diagnosis"] = df["diagnosis"].map({"M": 1, "B": 0})
+        if "diagnosis" not in df.columns:
+            raise ValueError("Входные данные не содержат колонку 'diagnosis'")
 
-    # Делим X и y
-    X = df.drop(columns=["diagnosis"])
-    y = df["diagnosis"]
+        if df.isnull().sum().sum() > 0:
+            logging.warning("Обнаружены пропущенные значения. Будет произведено их удаление.")
+            df.dropna(inplace=True)
 
-    # Масштабируем признаки
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+        # Преобразуем целевую переменную
+        df["diagnosis"] = df["diagnosis"].map({"M": 1, "B": 0})
+        if df["diagnosis"].isnull().any():
+            raise ValueError("Некорректные значения в колонке 'diagnosis'")
 
-    # Разделяем на train и test
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y, test_size=0.2, random_state=42, stratify=y
-    )
+        # Делим X и y
+        X = df.drop(columns=["diagnosis"])
+        y = df["diagnosis"]
 
-    # Создаем папку, если нужно
-    os.makedirs(output_dir, exist_ok=True)
+        # Масштабируем признаки
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
 
-    # Сохраняем с помощью joblib
-    joblib.dump(X_train, os.path.join(output_dir, "X_train.pkl"))
-    joblib.dump(X_test, os.path.join(output_dir, "X_test.pkl"))
-    joblib.dump(y_train, os.path.join(output_dir, "y_train.pkl"))
-    joblib.dump(y_test, os.path.join(output_dir, "y_test.pkl"))
-    joblib.dump(scaler, os.path.join(output_dir, "scaler.pkl"))
+        # Разделяем на train и test
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_scaled, y, test_size=0.2, random_state=42, stratify=y
+        )
 
-    logging.info(f"Данные успешно сохранены в папку: {output_dir}")
+        # Создаем папку, если нужно
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Сохраняем с помощью joblib
+        joblib.dump(X_train, os.path.join(output_dir, "X_train.pkl"))
+        joblib.dump(X_test, os.path.join(output_dir, "X_test.pkl"))
+        joblib.dump(y_train, os.path.join(output_dir, "y_train.pkl"))
+        joblib.dump(y_test, os.path.join(output_dir, "y_test.pkl"))
+        joblib.dump(scaler, os.path.join(output_dir, "scaler.pkl"))
+
+        logging.info(f"Данные успешно сохранены в папку: {output_dir}")
+    except Exception as e:
+        logging.error(f"Ошибка при обработке данных: {e}")
+        raise
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preprocess breast cancer data")

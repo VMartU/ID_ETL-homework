@@ -3,16 +3,25 @@ import joblib
 import os
 import json
 import logging
+import time
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 # Логгирование
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def evaluate(model_path, x_test_path, y_test_path, output_path):
-    logging.info("Загрузка модели и тестовых данных...")
-    model = joblib.load(model_path)
-    X_test = joblib.load(x_test_path)
-    y_test = joblib.load(y_test_path)
+    for attempt in range(3):
+        if all(map(os.path.exists, [model_path, x_test_path, y_test_path])):
+            logging.info("Загрузка модели и тестовых данных...")
+            model = joblib.load(model_path)
+            X_test = joblib.load(x_test_path)
+            y_test = joblib.load(y_test_path)
+            break
+        logging.warning(f"Файлы для оценки не найдены, попытка {attempt + 1}/3")
+        time.sleep(5)
+    else:
+        logging.error("Один из файлов (модель или данные) не найден после 3 попыток.")
+        raise FileNotFoundError("Модель или данные не найдены.")
 
     logging.info("Получение предсказаний...")
     y_pred = model.predict(X_test)
